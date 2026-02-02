@@ -1,8 +1,5 @@
 """
-MVP RAG Local - Sistema de Curadoria Inteligente de Vídeos
-Versão 1.0.0
+MVP RAG Local - Sistema de busca semantica de videos com IA
 """
 
-__version__ = "1.0.0"
-__author__ = "Sistema de Aprendizado"
-__description__ = "Sistema RAG multimodal para curadoria de vídeos"
+__version__ = "2.0.0"

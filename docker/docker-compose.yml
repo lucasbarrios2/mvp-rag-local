@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
   # ============================================================================
-  # PostgreSQL - Banco de dados existente + campos novos de análise
+  # PostgreSQL - Banco de dados
   # ============================================================================
   postgres:
     image: postgres:15-alpine
-    container_name: video-curator-postgres
+    container_name: mvp-rag-postgres
     restart: unless-stopped
 
     environment:
@@ -19,10 +17,7 @@ services:
       - "5432:5432"
 
     volumes:
-      # Dados persistentes
       - postgres_data:/var/lib/postgresql/data
-
-      # Scripts de inicialização
       - ../database/migrations:/docker-entrypoint-initdb.d
 
     healthcheck:
@@ -32,26 +27,21 @@ services:
       retries: 5
 
     networks:
-      - curator-network
+      - rag-network
 
   # ============================================================================
   # Qdrant - Vector Database para embeddings
   # ============================================================================
   qdrant:
     image: qdrant/qdrant:v1.7.4
-    container_name: video-curator-qdrant
+    container_name: mvp-rag-qdrant
     restart: unless-stopped
 
     ports:
-      - "6333:6333"  # HTTP API
-      - "6334:6334"  # gRPC API
+      - "6333:6333"
 
     volumes:
       - qdrant_storage:/qdrant/storage
-
-    environment:
-      # Sem autenticação para ambiente local
-      QDRANT__SERVICE__GRPC_PORT: 6334
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
@@ -60,77 +50,14 @@ services:
       retries: 5
 
     networks:
-      - curator-network
+      - rag-network
 
-  # ============================================================================
-  # PgAdmin - Interface web para PostgreSQL (opcional)
-  # ============================================================================
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: video-curator-pgadmin
-    restart: unless-stopped
-
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@curator.local
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_LISTEN_PORT: 80
-
-    ports:
-      - "5050:80"
-
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-
-    depends_on:
-      - postgres
-
-    networks:
-      - curator-network
-
-  # ============================================================================
-  # Redis - Cache e fila (para processamento em lote futuro)
-  # ============================================================================
-  redis:
-    image: redis:7-alpine
-    container_name: video-curator-redis
-    restart: unless-stopped
-
-    ports:
-      - "6379:6379"
-
-    volumes:
-      - redis_data:/data
-
-    command: redis-server --appendonly yes
-
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-    networks:
-      - curator-network
-
-# ============================================================================
-# VOLUMES PERSISTENTES
-# ============================================================================
 volumes:
   postgres_data:
     driver: local
-
   qdrant_storage:
     driver: local
 
-  pgadmin_data:
-    driver: local
-
-  redis_data:
-    driver: local
-
-# ============================================================================
-# NETWORK
-# ============================================================================
 networks:
-  curator-network:
+  rag-network:
     driver: bridge

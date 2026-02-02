@@ -1,70 +1,31 @@
 # ============================================================================
-# CORE DEPENDENCIES - MVP RAG Local
+# DEPENDENCIES - MVP RAG Local (Gemini + Streamlit)
 # ============================================================================
 
-# AI Models & APIs
-anthropic>=0.40.0              # Claude API
-openai>=1.10.0                 # GPT (opcional, para comparação)
-transformers>=4.36.0           # CLIP e outros modelos
-torch>=2.1.0                   # PyTorch para CLIP
-sentence-transformers>=2.3.0   # Embeddings alternativos
+# Google Gemini AI
+google-genai>=1.0.0                # Gemini API (video analysis + embeddings + RAG)
+
+# Web Interface
+streamlit>=1.40.0                  # UI framework
 
 # Vector Database
-qdrant-client>=1.7.0           # Qdrant SDK
+qdrant-client>=1.7.0               # Qdrant SDK
 
 # Relational Database
-psycopg2-binary>=2.9.9         # PostgreSQL driver
-SQLAlchemy>=2.0.25             # ORM
-alembic>=1.13.0                # Migrations
+psycopg2-binary>=2.9.9             # PostgreSQL driver
+SQLAlchemy>=2.0.25                 # ORM
 
-# Video Processing
-opencv-python>=4.8.0           # OpenCV
-scenedetect[opencv]>=0.6.3     # Scene detection
-pillow>=10.1.0                 # Image processing
-imageio>=2.33.0                # Video I/O
-imageio-ffmpeg>=0.4.9          # FFmpeg wrapper
+# Validation & Config
+pydantic>=2.5.0                    # Data validation
+pydantic-settings>=2.1.0          # Settings management
+python-dotenv>=1.0.0               # .env files
 
-# Data & Utils
-numpy>=1.24.0                  # Arrays
-pandas>=2.1.0                  # DataFrames
-pydantic>=2.5.0                # Validation
-pydantic-settings>=2.1.0       # Settings management
-python-dotenv>=1.0.0           # .env files
-tqdm>=4.66.0                   # Progress bars
-rich>=13.7.0                   # Terminal formatting
+# Utilities
+numpy>=1.24.0                      # Arrays
+pillow>=10.1.0                     # Image processing
+rich>=13.7.0                       # Terminal formatting
 
-# Async & Queue
-celery>=5.3.4                  # Task queue (opcional)
-redis>=5.0.0                   # Cache & broker
-
-# CLI
-typer>=0.9.0                   # CLI framework
-click>=8.1.7                   # CLI utilities
-
-# Testing & Development
-pytest>=7.4.0                  # Testing
-pytest-asyncio>=0.21.0         # Async testing
-pytest-cov>=4.1.0              # Coverage
-black>=23.12.0                 # Code formatter
-ruff>=0.1.0                    # Linter
-mypy>=1.8.0                    # Type checking
-
-# Jupyter (para exploração)
-jupyter>=1.0.0                 # Notebooks
-ipywidgets>=8.1.0              # Interactive widgets
-matplotlib>=3.8.0              # Plots
-seaborn>=0.13.0                # Statistical plots
-
-# Monitoring (opcional)
-prometheus-client>=0.19.0      # Metrics
-
-# ============================================================================
-# VERSÕES FIXADAS PARA REPRODUZIBILIDADE
-# ============================================================================
-
-# Se quiser versões exatas:
-# anthropic==0.40.0
-# torch==2.1.2
-# transformers==4.36.2
-# qdrant-client==1.7.4
-# SQLAlchemy==2.0.25
+# Development (optional)
+pytest>=7.4.0                      # Testing
+black>=23.12.0                     # Code formatter
+ruff>=0.1.0                        # Linter

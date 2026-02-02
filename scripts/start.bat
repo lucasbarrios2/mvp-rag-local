@@ -45,13 +45,10 @@ echo.
 echo Qdrant:      http://localhost:6333
 echo   Dashboard: http://localhost:6333/dashboard
 echo.
-echo PgAdmin:     http://localhost:5050
-echo   Email: admin@curator.local
-echo   Senha: admin
-echo.
-echo Redis:       localhost:6379
-echo.
 echo ========================================
+echo.
+echo Para iniciar a interface:
+echo   streamlit run app.py
 echo.
 echo Para ver logs em tempo real:
 echo   cd docker ^&^& docker-compose logs -f

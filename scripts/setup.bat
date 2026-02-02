@@ -9,8 +9,8 @@ echo  MVP RAG Local - Setup Inicial
 echo ========================================
 echo.
 
-REM Verificar se Docker está rodando
-echo [1/6] Verificando Docker...
+REM Verificar se Docker esta rodando
+echo [1/5] Verificando Docker...
 docker --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERRO] Docker nao encontrado. Instale Docker Desktop primeiro.
@@ -20,9 +20,9 @@ if %errorlevel% neq 0 (
 )
 echo [OK] Docker encontrado
 
-REM Verificar se Python está instalado
+REM Verificar se Python esta instalado
 echo.
-echo [2/6] Verificando Python...
+echo [2/5] Verificando Python...
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
     echo [ERRO] Python nao encontrado. Instale Python 3.10+ primeiro.
@@ -32,21 +32,21 @@ if %errorlevel% neq 0 (
 )
 echo [OK] Python encontrado
 
-REM Criar .env se não existir
+REM Criar .env se nao existir
 echo.
-echo [3/6] Configurando variaveis de ambiente...
-if not exist "docker\.env" (
-    copy "docker\.env.example" "docker\.env"
-    echo [ATENCAO] Arquivo docker\.env criado a partir do .env.example
-    echo IMPORTANTE: Edite docker\.env e adicione sua ANTHROPIC_API_KEY
-    notepad "docker\.env"
+echo [3/5] Configurando variaveis de ambiente...
+if not exist ".env" (
+    copy ".env.example" ".env"
+    echo [ATENCAO] Arquivo .env criado a partir do .env.example
+    echo IMPORTANTE: Edite .env e adicione sua GOOGLE_API_KEY
+    notepad ".env"
 ) else (
     echo [OK] Arquivo .env ja existe
 )
 
 REM Criar ambiente virtual Python
 echo.
-echo [4/6] Criando ambiente virtual Python...
+echo [4/5] Criando ambiente virtual Python...
 if not exist "venv\" (
     python -m venv venv
     echo [OK] Ambiente virtual criado
@@ -54,21 +54,16 @@ if not exist "venv\" (
     echo [OK] Ambiente virtual ja existe
 )
 
-REM Ativar venv e instalar dependências
+REM Ativar venv e instalar dependencias
 echo.
-echo [5/6] Instalando dependencias Python...
+echo [5/5] Instalando dependencias Python...
 call venv\Scripts\activate.bat
 pip install --upgrade pip
 pip install -r requirements.txt
 echo [OK] Dependencias instaladas
 
-REM Criar diretórios de dados
-echo.
-echo [6/6] Criando diretorios de dados...
-if not exist "data\" mkdir data
-if not exist "data\frames_cache\" mkdir data\frames_cache
-if not exist "data\videos\" mkdir data\videos
-echo [OK] Diretorios criados
+REM Criar diretorio de uploads
+if not exist "uploads\" mkdir uploads
 
 echo.
 echo ========================================
@@ -77,20 +72,14 @@ echo ========================================
 echo.
 echo Proximos passos:
 echo.
-echo 1. Edite docker\.env e adicione sua ANTHROPIC_API_KEY
+echo 1. Edite .env e adicione sua GOOGLE_API_KEY
 echo    (se ainda nao fez)
 echo.
 echo 2. Suba a infraestrutura Docker:
-echo    cd docker
-echo    docker-compose up -d
+echo    scripts\start.bat
 echo.
-echo 3. Rode a migracao do banco de dados:
-echo    scripts\migrate.bat
-echo.
-echo 4. Enriqueça seus primeiros clips:
+echo 3. Rode a interface Streamlit:
 echo    venv\Scripts\activate
-echo    python src\pipeline\enrichment_pipeline.py
-echo.
-echo Para mais detalhes, leia: docs\00_SETUP_GUIDE.md
+echo    streamlit run app.py
 echo.
 pause
