@@ -5,6 +5,7 @@ Pagina de Busca RAG - Busca semantica de videos com interface chat.
 import streamlit as st
 
 from src.config import settings
+from src.components import video_player
 from src.models import SearchResult, SearchResponse
 from src.services.database_service import DatabaseService
 from src.services.embedding_service import EmbeddingService
@@ -94,10 +95,7 @@ def _display_results(results: list[dict]):
             with col1:
                 file_path = r.get("file_path")
                 if file_path:
-                    import os
-
-                    if os.path.exists(file_path):
-                        st.video(file_path)
+                    video_player(file_path)
             with col2:
                 if r.get("analysis_description"):
                     st.write(r["analysis_description"])

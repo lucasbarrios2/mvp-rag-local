@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from src.config import settings
+from src.components import video_player
 from src.services.database_service import DatabaseService
 from src.services.embedding_service import EmbeddingService
 from src.services.gemini_service import GeminiService
@@ -91,7 +92,7 @@ if uploaded_file is not None:
         f.write(uploaded_file.getbuffer())
 
     # Mostrar player
-    st.video(str(file_path))
+    video_player(str(file_path))
 
     st.markdown(
         f"**Arquivo:** {uploaded_file.name} "
@@ -203,8 +204,8 @@ try:
             ):
                 col1, col2 = st.columns([1, 2])
                 with col1:
-                    if video.file_path and os.path.exists(video.file_path):
-                        st.video(video.file_path)
+                    if video.file_path:
+                        video_player(video.file_path)
                 with col2:
                     if video.analysis_description:
                         st.write(video.analysis_description)
