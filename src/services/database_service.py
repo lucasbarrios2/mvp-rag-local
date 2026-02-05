@@ -221,3 +221,59 @@ class DatabaseService:
         with self._session() as session:
             videos = session.query(Video).filter(Video.id.in_(ids)).all()
             return {v.id: v for v in videos}
+
+    def get_video_by_newsflare_id(self, newsflare_id: str) -> Optional[Video]:
+        """Busca video pelo newsflare_id."""
+        with self._session() as session:
+            return (
+                session.query(Video)
+                .filter(Video.newsflare_id == newsflare_id)
+                .first()
+            )
+
+    def delete_video(self, video_id: int) -> bool:
+        """Remove video do banco de dados. Retorna True se deletou."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).first()
+            if not video:
+                return False
+            session.delete(video)
+            session.commit()
+            return True
+
+    def update_source_metadata(self, video_id: int, metadata: dict) -> Video:
+        """Atualiza metadata de fonte (Newsflare) de um video."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).one()
+            for key, value in metadata.items():
+                if hasattr(video, key) and value is not None:
+                    setattr(video, key, value)
+            video.source = metadata.get("source", video.source or "local")
+            session.commit()
+            session.refresh(video)
+            return video
+
+    def update_unified_embedding(self, video_id: int, embedding_id: str) -> None:
+        """Atualiza o unified_embedding_id de um video."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).one()
+            video.unified_embedding_id = embedding_id
+            session.commit()
+
+    def count_with_metadata(self) -> int:
+        """Conta videos que possuem metadata de fonte (newsflare_id preenchido)."""
+        with self._session() as session:
+            return (
+                session.query(Video)
+                .filter(Video.newsflare_id.isnot(None))
+                .count()
+            )
+
+    def count_with_unified_embedding(self) -> int:
+        """Conta videos que possuem unified embedding."""
+        with self._session() as session:
+            return (
+                session.query(Video)
+                .filter(Video.unified_embedding_id.isnot(None))
+                .count()
+            )

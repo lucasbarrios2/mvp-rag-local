@@ -20,6 +20,11 @@ pydantic>=2.5.0                    # Data validation
 pydantic-settings>=2.1.0          # Settings management
 python-dotenv>=1.0.0               # .env files
 
+# API
+fastapi>=0.115.0                   # REST API framework
+uvicorn[standard]>=0.34.0         # ASGI server
+python-multipart>=0.0.18          # File upload support
+
 # Utilities
 numpy>=1.24.0                      # Arrays
 pillow>=10.1.0                     # Image processing

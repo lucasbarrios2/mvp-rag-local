@@ -8,6 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
+    Boolean,
     Column,
     Integer,
     String,
@@ -79,6 +80,30 @@ class Video(Base):
     visual_embedding_id = Column(String(255))
     narrative_embedding_id = Column(String(255))
     embedding_id = Column(String(255))  # Legado
+
+    # Source metadata (Newsflare, via MENTOR)
+    newsflare_id = Column(String(255), unique=True)
+    event_date = Column(TIMESTAMP)
+    filming_location = Column(Text)
+    uploader = Column(String(500))
+    category = Column(String(200))
+    is_exclusive = Column(Boolean, default=False)
+    license_type = Column(String(100))
+    source_description = Column(Text)
+    source_tags = Column(JSONB, default=[])
+    newsflare_metadata = Column(JSONB, default={})
+
+    # Audio context
+    audio_transcript = Column(Text)
+    audio_language = Column(String(50))
+    has_speech = Column(Boolean)
+    audio_description = Column(Text)
+
+    # Tracking
+    source = Column(String(50), default="local")
+
+    # Unified embedding
+    unified_embedding_id = Column(String(255))
 
     # Timestamps
     created_at = Column(TIMESTAMP, default=func.now())

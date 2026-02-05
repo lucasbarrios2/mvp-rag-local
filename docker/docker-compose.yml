@@ -33,7 +33,7 @@ services:
   # Qdrant - Vector Database para embeddings
   # ============================================================================
   qdrant:
-    image: qdrant/qdrant:v1.7.4
+    image: qdrant/qdrant:v1.12.1
     container_name: mvp-rag-qdrant
     restart: unless-stopped
 

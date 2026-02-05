@@ -34,6 +34,10 @@ class EmbeddingService:
         )
         return result.embeddings[0].values
 
+    def generate_unified(self, composed_text: str) -> list[float]:
+        """Gera embedding unificado a partir de texto ja composto pelo ContextComposer."""
+        return self.generate(composed_text)
+
     def generate_for_visual(self, analysis: VisualAnalysis) -> list[float]:
         """Gera embedding para analise VISUAL."""
         parts = [analysis.visual_description]

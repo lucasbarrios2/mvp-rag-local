@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.models import VideoAnalysis, DualVideoAnalysis
+from src.services.context_composer import ContextComposer
 from src.services.database_service import DatabaseService
 from src.services.embedding_service import EmbeddingService
 from src.services.gemini_service import GeminiService
@@ -26,6 +27,7 @@ class ProcessingResult:
     analysis: Optional[DualVideoAnalysis] = None
     visual_embedding_id: Optional[str] = None
     narrative_embedding_id: Optional[str] = None
+    unified_embedding_id: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -49,6 +51,7 @@ class VideoProcessor:
         self.gemini = gemini_service
         self.embedding = embedding_service
         self.qdrant = qdrant_service
+        self.composer = ContextComposer()
 
     def process(self, task: QueueTask) -> ProcessingResult:
         """
@@ -118,12 +121,40 @@ class VideoProcessor:
             self.db.update_dual_analysis(video_id, dual_analysis, visual_id, narrative_id)
             logger.info(f"Video {video_id} processado com sucesso (dual)")
 
+            # 7-11. Unified embedding
+            unified_embedding_id = None
+            try:
+                updated_video = self.db.get_video(video_id)
+                if updated_video:
+                    composed_text = self.composer.compose_embedding_text(updated_video)
+                    if composed_text:
+                        logger.info(f"Gerando unified embedding para video {video_id}...")
+                        unified_emb = self.embedding.generate_unified(composed_text)
+                        unified_payload = {
+                            "video_id": video_id,
+                            "filename": updated_video.filename,
+                            "category": updated_video.category,
+                            "emotional_tone": updated_video.emotional_tone,
+                            "intensity": updated_video.intensity,
+                            "viral_potential": updated_video.viral_potential,
+                            "is_exclusive": updated_video.is_exclusive or False,
+                            "source": updated_video.source or "local",
+                        }
+                        unified_embedding_id = self.qdrant.index_unified(
+                            video_id, unified_emb, unified_payload
+                        )
+                        self.db.update_unified_embedding(video_id, unified_embedding_id)
+                        logger.info(f"Unified embedding indexado para video {video_id}")
+            except Exception as e:
+                logger.warning(f"Falha ao gerar unified embedding para video {video_id}: {e}")
+
             return ProcessingResult(
                 success=True,
                 video_id=video_id,
                 analysis=dual_analysis,
                 visual_embedding_id=visual_id,
                 narrative_embedding_id=narrative_id,
+                unified_embedding_id=unified_embedding_id,
             )
 
         except Exception as e:
