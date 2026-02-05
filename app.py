@@ -94,9 +94,9 @@ st.set_page_config(
 # Iniciar worker (apenas uma vez devido ao cache_resource)
 worker = init_queue_worker()
 
-# Status do worker na sidebar
+# Status do worker na sidebar (simplificado para evitar conflitos)
 with st.sidebar:
-    if worker and worker.is_worker_running():
+    if worker is not None:
         st.success("Worker ativo", icon="🟢")
     elif not settings.google_api_key:
         st.warning("API Key nao configurada", icon="⚠️")
@@ -109,6 +109,7 @@ with st.sidebar:
 
 pg_upload = st.Page("pages/1_Enriquecimento.py", title="Enriquecimento", icon="📤")
 pg_search = st.Page("pages/2_Busca_RAG.py", title="Busca RAG", icon="🔍")
+pg_direct = st.Page("pages/3_Analise_Direta.py", title="Analise Direta", icon="💬")
 
-nav = st.navigation([pg_upload, pg_search])
+nav = st.navigation([pg_upload, pg_search, pg_direct])
 nav.run()

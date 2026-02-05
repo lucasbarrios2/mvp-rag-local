@@ -1,12 +1,13 @@
 """
 VideoProcessor - Logica de processamento de video extraida para uso com fila.
+Suporta analise dual (visual + narrativa) com embeddings separados.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from src.models import VideoAnalysis
+from src.models import VideoAnalysis, DualVideoAnalysis
 from src.services.database_service import DatabaseService
 from src.services.embedding_service import EmbeddingService
 from src.services.gemini_service import GeminiService
@@ -22,17 +23,18 @@ class ProcessingResult:
 
     success: bool
     video_id: int
-    analysis: Optional[VideoAnalysis] = None
-    embedding_id: Optional[str] = None
+    analysis: Optional[DualVideoAnalysis] = None
+    visual_embedding_id: Optional[str] = None
+    narrative_embedding_id: Optional[str] = None
     error: Optional[str] = None
 
 
 class VideoProcessor:
     """
     Processador de videos que coordena:
-    1. Analise Gemini
-    2. Geracao de embedding
-    3. Indexacao no Qdrant
+    1. Analise Gemini DUAL (visual + narrativa)
+    2. Geracao de embeddings duplos
+    3. Indexacao no Qdrant (collection dual)
     4. Atualizacao no PostgreSQL
     """
 
@@ -50,7 +52,7 @@ class VideoProcessor:
 
     def process(self, task: QueueTask) -> ProcessingResult:
         """
-        Processa um video da fila.
+        Processa um video da fila com analise DUAL.
 
         Args:
             task: Item da fila com video_id
@@ -72,42 +74,56 @@ class VideoProcessor:
 
             # 2. Marcar como analyzing
             self.db.set_analyzing(video_id)
-            logger.info(f"Iniciando analise do video {video_id}: {video.filename}")
+            logger.info(f"Iniciando analise DUAL do video {video_id}: {video.filename}")
 
-            # 3. Analise Gemini
-            logger.info(f"Enviando video {video_id} para Gemini...")
-            analysis = self.gemini.analyze_video(video.file_path)
-            logger.info(f"Analise Gemini concluida para video {video_id}")
+            # 3. Analise Gemini DUAL (visual + narrativa)
+            logger.info(f"Enviando video {video_id} para Gemini (analise dual)...")
+            dual_analysis = self.gemini.analyze_video_dual(video.file_path)
+            logger.info(f"Analise dual concluida para video {video_id}")
 
-            # 4. Gerar embedding
-            logger.info(f"Gerando embedding para video {video_id}...")
-            embedding = self.embedding.generate_for_video(analysis)
-            logger.info(f"Embedding gerado para video {video_id}")
+            # 4. Gerar embeddings duplos
+            logger.info(f"Gerando embeddings duplos para video {video_id}...")
+            dual_embeddings = self.embedding.generate_dual(dual_analysis)
+            logger.info(f"Embeddings duplos gerados para video {video_id}")
 
-            # 5. Indexar no Qdrant
-            logger.info(f"Indexando video {video_id} no Qdrant...")
+            # 5. Indexar no Qdrant (collection dual)
+            logger.info(f"Indexando video {video_id} no Qdrant (dual)...")
             payload = {
                 "video_id": video_id,
                 "filename": video.filename,
-                "analysis_description": analysis.description,
-                "tags": analysis.tags,
-                "emotional_tone": analysis.emotional_tone,
-                "intensity": analysis.intensity,
-                "viral_potential": analysis.viral_potential,
-                "themes": analysis.themes,
+                # Visual
+                "visual_description": dual_analysis.visual.visual_description,
+                "visual_tags": dual_analysis.visual.visual_tags,
+                "objects_detected": dual_analysis.visual.objects_detected,
+                "visual_style": dual_analysis.visual.visual_style,
+                "color_palette": dual_analysis.visual.color_palette,
+                # Narrativa
+                "narrative_description": dual_analysis.narrative.narrative_description,
+                "narrative_tags": dual_analysis.narrative.narrative_tags,
+                "emotional_tone": dual_analysis.narrative.emotional_tone,
+                "intensity": dual_analysis.narrative.intensity,
+                "viral_potential": dual_analysis.narrative.viral_potential,
+                "themes": dual_analysis.narrative.themes,
+                "target_audience": dual_analysis.narrative.target_audience,
             }
-            embedding_id = self.qdrant.index(video_id, embedding, payload)
-            logger.info(f"Video {video_id} indexado no Qdrant")
+            visual_id, narrative_id = self.qdrant.index_dual(
+                video_id,
+                dual_embeddings.visual,
+                dual_embeddings.narrative,
+                payload,
+            )
+            logger.info(f"Video {video_id} indexado no Qdrant (dual)")
 
             # 6. Atualizar PostgreSQL
-            self.db.update_analysis(video_id, analysis, embedding_id)
-            logger.info(f"Video {video_id} processado com sucesso")
+            self.db.update_dual_analysis(video_id, dual_analysis, visual_id, narrative_id)
+            logger.info(f"Video {video_id} processado com sucesso (dual)")
 
             return ProcessingResult(
                 success=True,
                 video_id=video_id,
-                analysis=analysis,
-                embedding_id=embedding_id,
+                analysis=dual_analysis,
+                visual_embedding_id=visual_id,
+                narrative_embedding_id=narrative_id,
             )
 
         except Exception as e:

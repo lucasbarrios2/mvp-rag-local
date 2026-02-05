@@ -282,11 +282,14 @@ class TestVideoProcessor:
         result = ProcessingResult(
             success=True,
             video_id=1,
-            embedding_id="emb-123",
+            visual_embedding_id="emb-visual-123",
+            narrative_embedding_id="emb-narrative-123",
         )
         assert result.success is True
         assert result.video_id == 1
         assert result.error is None
+        assert result.visual_embedding_id == "emb-visual-123"
+        assert result.narrative_embedding_id == "emb-narrative-123"
 
     def test_processing_result_failure(self):
         """Testa ProcessingResult em caso de falha."""

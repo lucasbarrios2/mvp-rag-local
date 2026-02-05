@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from src.models import Video, VideoAnalysis
+from src.models import Video, VideoAnalysis, DualVideoAnalysis
 
 
 class DatabaseService:
@@ -46,7 +46,7 @@ class DatabaseService:
         analysis: VideoAnalysis,
         embedding_id: str,
     ) -> Video:
-        """Atualiza video com resultados da analise Gemini."""
+        """Atualiza video com resultados da analise Gemini (legado)."""
         with self._session() as session:
             video = session.query(Video).filter(Video.id == video_id).one()
             video.analysis_description = analysis.description
@@ -61,6 +61,62 @@ class DatabaseService:
             video.analyzed_at = datetime.utcnow()
             if analysis.duration_estimate:
                 video.duration_seconds = analysis.duration_estimate
+            session.commit()
+            session.refresh(video)
+            return video
+
+    def update_dual_analysis(
+        self,
+        video_id: int,
+        analysis: DualVideoAnalysis,
+        visual_embedding_id: str,
+        narrative_embedding_id: str,
+    ) -> Video:
+        """Atualiza video com resultados da analise DUAL (visual + narrativa)."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).one()
+
+            # Analise VISUAL
+            video.visual_description = analysis.visual.visual_description
+            video.visual_tags = analysis.visual.visual_tags
+            video.objects_detected = analysis.visual.objects_detected
+            video.scenes = analysis.visual.scenes
+            video.visual_style = analysis.visual.visual_style
+            video.color_palette = analysis.visual.color_palette
+            video.movement_intensity = analysis.visual.movement_intensity
+
+            # Analise NARRATIVA
+            video.narrative_description = analysis.narrative.narrative_description
+            video.narrative_tags = analysis.narrative.narrative_tags
+            video.emotional_tone = analysis.narrative.emotional_tone
+            video.intensity = analysis.narrative.intensity
+            video.viral_potential = analysis.narrative.viral_potential
+            video.key_moments = analysis.narrative.key_moments
+            video.themes = analysis.narrative.themes
+            video.storytelling_elements = analysis.narrative.storytelling_elements
+            video.target_audience = analysis.narrative.target_audience
+
+            # Campos combinados (legado/compatibilidade)
+            video.analysis_description = (
+                f"[VISUAL] {analysis.visual.visual_description}\n\n"
+                f"[NARRATIVA] {analysis.narrative.narrative_description}"
+            )
+            video.tags = list(set(
+                analysis.visual.visual_tags + analysis.narrative.narrative_tags
+            ))
+
+            # Embeddings
+            video.visual_embedding_id = visual_embedding_id
+            video.narrative_embedding_id = narrative_embedding_id
+            video.embedding_id = visual_embedding_id  # Legado
+
+            # Status
+            video.processing_status = "analyzed"
+            video.analyzed_at = datetime.utcnow()
+
+            if analysis.visual.duration_estimate:
+                video.duration_seconds = analysis.visual.duration_estimate
+
             session.commit()
             session.refresh(video)
             return video
