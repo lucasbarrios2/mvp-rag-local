@@ -23,12 +23,27 @@ from api.schemas.responses import (
     IngestResponse,
     MetadataUpdateResponse,
     VideoContext,
+    VideoListResponse,
+    VideoSummary,
 )
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/videos", tags=["videos"], dependencies=[Depends(verify_api_key)])
+
+
+@router.get("", response_model=VideoListResponse)
+def list_videos(
+    status: str = None,
+    db=Depends(get_db),
+):
+    """Lista todos os videos, opcionalmente filtrados por status."""
+    videos = db.list_videos(status=status)
+    return VideoListResponse(
+        total=len(videos),
+        videos=[VideoSummary.model_validate(v) for v in videos],
+    )
 
 
 @router.post("/ingest", response_model=IngestResponse)

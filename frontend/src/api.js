@@ -92,6 +92,9 @@ export async function deleteVideo(videoId) {
   })
 }
 
-export async function listVideos() {
-  return request(`${BASE}/stats`, { headers: headers() })
+export async function listVideos(status = '') {
+  const url = status
+    ? `${BASE}/videos?status=${encodeURIComponent(status)}`
+    : `${BASE}/videos`
+  return request(url, { headers: headers() })
 }

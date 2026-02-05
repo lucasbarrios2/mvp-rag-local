@@ -64,6 +64,27 @@ class VideoContext(BaseModel):
     analyzed_at: Optional[datetime] = None
 
 
+class VideoSummary(BaseModel):
+    """Resumo de um video para listagem."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    filename: str
+    processing_status: Optional[str] = None
+    emotional_tone: Optional[str] = None
+    category: Optional[str] = None
+    source: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class VideoListResponse(BaseModel):
+    """Resposta de listagem de videos."""
+
+    total: int
+    videos: list[VideoSummary] = Field(default_factory=list)
+
+
 class SearchHit(BaseModel):
     """Resultado individual de busca."""
 

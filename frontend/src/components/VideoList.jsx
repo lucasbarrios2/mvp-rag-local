@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { search, videoContext, similar } from '../api'
+import { listVideos, videoContext, similar } from '../api'
 import VideoDetail from './VideoDetail'
+
+const STATUS_OPTIONS = ['', 'pending', 'analyzing', 'analyzed', 'failed']
 
 export default function VideoList() {
   const [videos, setVideos] = useState([])
@@ -10,19 +12,18 @@ export default function VideoList() {
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [similarResults, setSimilarResults] = useState(null)
-  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   useEffect(() => {
     loadVideos()
   }, [])
 
-  async function loadVideos() {
+  async function loadVideos(status = '') {
     setLoading(true)
     setError(null)
     try {
-      // Use a broad search to list videos since there's no dedicated list endpoint
-      const res = await search('video', {}, 50)
-      setVideos(res.results)
+      const res = await listVideos(status)
+      setVideos(res.videos)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -30,22 +31,9 @@ export default function VideoList() {
     }
   }
 
-  async function filterVideos(e) {
-    e?.preventDefault()
-    if (!query.trim()) {
-      loadVideos()
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await search(query, {}, 50)
-      setVideos(res.results)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
+  function handleFilterChange(status) {
+    setStatusFilter(status)
+    loadVideos(status)
   }
 
   async function selectVideo(id) {
@@ -61,7 +49,7 @@ export default function VideoList() {
     try {
       const ctx = await videoContext(id)
       setDetail(ctx)
-    } catch (e) {
+    } catch {
       setDetail(null)
     } finally {
       setDetailLoading(false)
@@ -86,16 +74,26 @@ export default function VideoList() {
     <div>
       <h2>Videos</h2>
 
-      <form onSubmit={filterVideos} className="search-bar">
-        <input
-          type="text"
-          placeholder="Filter videos..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <button type="submit" className="btn btn-sm">Filter</button>
-        <button type="button" className="btn btn-sm btn-outline" onClick={loadVideos}>All</button>
-      </form>
+      <div className="search-bar">
+        {STATUS_OPTIONS.map(s => (
+          <button
+            key={s}
+            type="button"
+            className={`btn btn-sm ${statusFilter === s ? '' : 'btn-outline'}`}
+            onClick={() => handleFilterChange(s)}
+          >
+            {s || 'All'}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="btn btn-sm btn-outline"
+          onClick={() => loadVideos(statusFilter)}
+          style={{ marginLeft: 'auto' }}
+        >
+          Refresh
+        </button>
+      </div>
 
       {error && <div className="error-msg">{error}</div>}
 
@@ -109,6 +107,9 @@ export default function VideoList() {
                 onClick={() => selectVideo(v.id)}
               >
                 <span className="filename">{v.filename || `Video #${v.id}`}</span>
+                <span className={`status-badge ${v.processing_status}`}>
+                  {v.processing_status}
+                </span>
                 {v.emotional_tone && <span className="badge tone">{v.emotional_tone}</span>}
                 {v.source && <span className="badge">{v.source}</span>}
               </div>
