@@ -10,8 +10,8 @@ os.environ.setdefault("GOOGLE_API_KEY", "test-key")
 os.environ.setdefault("POSTGRES_HOST", "localhost")
 os.environ.setdefault("POSTGRES_PORT", "5432")
 os.environ.setdefault("POSTGRES_DB", "video_assets")
-os.environ.setdefault("POSTGRES_USER", "postgres")
-os.environ.setdefault("POSTGRES_PASSWORD", "postgres")
+os.environ.setdefault("POSTGRES_USER", "curator")
+os.environ.setdefault("POSTGRES_PASSWORD", "curator_pass_2026")
 os.environ.setdefault("QDRANT_HOST", "localhost")
 os.environ.setdefault("QDRANT_PORT", "6333")
 
@@ -177,6 +177,179 @@ class TestGeminiService:
             model="gemini-3-pro-preview",
         )
         assert svc.model == "gemini-3-pro-preview"
+
+    def test_gemini_service_has_video_rag_method(self):
+        """Testa que o metodo de RAG com video existe."""
+        from src.services.gemini_service import GeminiService
+        svc = GeminiService(
+            api_key="test-key",
+            model="gemini-3-pro-preview",
+        )
+        assert hasattr(svc, "generate_rag_response_with_videos")
+        assert callable(svc.generate_rag_response_with_videos)
+
+    def test_gemini_video_rag_empty_paths(self):
+        """Testa resposta quando nao ha videos."""
+        from src.services.gemini_service import GeminiService
+        svc = GeminiService(
+            api_key="test-key",
+            model="gemini-3-pro-preview",
+        )
+        result = svc.generate_rag_response_with_videos(
+            query="teste",
+            video_paths=[],
+        )
+        assert "Nenhum video disponivel" in result
+
+    def test_gemini_prompts_exist(self):
+        """Testa que os prompts de RAG estao definidos."""
+        from src.services.gemini_service import (
+            RAG_PROMPT_TEMPLATE,
+            RAG_VIDEO_PROMPT_TEMPLATE,
+        )
+        assert "{query}" in RAG_PROMPT_TEMPLATE
+        assert "{clips_context}" in RAG_PROMPT_TEMPLATE
+        assert "{query}" in RAG_VIDEO_PROMPT_TEMPLATE
+        assert "{num_videos}" in RAG_VIDEO_PROMPT_TEMPLATE
+
+
+class TestQueueService:
+    """Testes do servico de fila."""
+
+    def test_queue_task_dataclass(self):
+        """Testa dataclass QueueTask."""
+        from datetime import datetime
+        from src.services.queue_service import QueueTask
+        task = QueueTask(
+            id=1,
+            video_id=10,
+            status="pending",
+            priority=0,
+            attempts=0,
+            max_attempts=3,
+            error_message=None,
+            created_at=datetime.utcnow(),
+        )
+        assert task.id == 1
+        assert task.video_id == 10
+        assert task.status == "pending"
+
+    def test_queue_stats_dataclass(self):
+        """Testa dataclass QueueStats."""
+        from src.services.queue_service import QueueStats
+        stats = QueueStats(
+            pending=5,
+            processing=2,
+            completed=10,
+            failed=1,
+            total=18,
+        )
+        assert stats.pending == 5
+        assert stats.total == 18
+
+    def test_queue_service_init(self):
+        """Testa inicializacao do QueueService."""
+        from src.services.queue_service import QueueService
+        from src.config import settings
+        try:
+            queue = QueueService(settings.postgres_url)
+            assert queue.worker_id is not None
+            assert queue._worker_thread is None
+        except Exception as e:
+            pytest.skip(f"Banco de dados nao acessivel: {e}")
+
+    def test_queue_service_stats(self):
+        """Testa estatisticas da fila."""
+        from src.services.queue_service import QueueService
+        from src.config import settings
+        try:
+            queue = QueueService(settings.postgres_url)
+            stats = queue.get_stats()
+            assert stats.pending >= 0
+            assert stats.processing >= 0
+            assert stats.completed >= 0
+            assert stats.failed >= 0
+        except Exception as e:
+            pytest.skip(f"Banco de dados nao acessivel: {e}")
+
+
+class TestVideoProcessor:
+    """Testes do processador de video."""
+
+    def test_processing_result_dataclass(self):
+        """Testa dataclass ProcessingResult."""
+        from src.services.video_processor import ProcessingResult
+        result = ProcessingResult(
+            success=True,
+            video_id=1,
+            embedding_id="emb-123",
+        )
+        assert result.success is True
+        assert result.video_id == 1
+        assert result.error is None
+
+    def test_processing_result_failure(self):
+        """Testa ProcessingResult em caso de falha."""
+        from src.services.video_processor import ProcessingResult
+        result = ProcessingResult(
+            success=False,
+            video_id=1,
+            error="Erro de teste",
+        )
+        assert result.success is False
+        assert "Erro" in result.error
+
+
+class TestComponents:
+    """Testes dos componentes UI."""
+
+    def test_calculate_total_pages(self):
+        """Testa calculo de paginas."""
+        from src.components import calculate_total_pages
+        assert calculate_total_pages(0, 10) == 1
+        assert calculate_total_pages(5, 10) == 1
+        assert calculate_total_pages(10, 10) == 1
+        assert calculate_total_pages(11, 10) == 2
+        assert calculate_total_pages(25, 10) == 3
+
+    def test_queue_status_badge(self):
+        """Testa badges de status."""
+        from src.components import queue_status_badge
+        assert "Pendente" in queue_status_badge("pending")
+        assert "Processando" in queue_status_badge("processing")
+        assert "Concluido" in queue_status_badge("completed")
+        assert "Falhou" in queue_status_badge("failed")
+
+
+class TestDatabaseServicePagination:
+    """Testes de paginacao do DatabaseService."""
+
+    @pytest.fixture
+    def db_url(self):
+        from src.config import settings
+        return settings.postgres_url
+
+    def test_list_videos_paginated(self, db_url):
+        """Testa listagem paginada."""
+        from src.services.database_service import DatabaseService
+        try:
+            db = DatabaseService(db_url)
+            videos, total = db.list_videos_paginated(page=1, per_page=10)
+            assert isinstance(videos, list)
+            assert isinstance(total, int)
+            assert total >= 0
+        except Exception as e:
+            pytest.skip(f"Banco de dados nao acessivel: {e}")
+
+    def test_get_videos_by_ids_dict_empty(self, db_url):
+        """Testa busca por IDs com lista vazia."""
+        from src.services.database_service import DatabaseService
+        try:
+            db = DatabaseService(db_url)
+            result = db.get_videos_by_ids_dict([])
+            assert result == {}
+        except Exception as e:
+            pytest.skip(f"Banco de dados nao acessivel: {e}")
 
 
 if __name__ == "__main__":

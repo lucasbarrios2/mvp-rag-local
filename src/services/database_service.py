@@ -121,3 +121,47 @@ class DatabaseService:
                 "pending": pending,
                 "failed": failed,
             }
+
+    def list_videos_paginated(
+        self,
+        page: int = 1,
+        per_page: int = 10,
+        status: Optional[str] = None,
+    ) -> tuple[list[Video], int]:
+        """
+        Lista videos com paginacao.
+
+        Args:
+            page: Numero da pagina (1-indexed)
+            per_page: Itens por pagina
+            status: Filtro opcional por status
+
+        Returns:
+            Tupla (lista de videos, total de videos)
+        """
+        with self._session() as session:
+            query = session.query(Video).order_by(Video.created_at.desc())
+            if status:
+                query = query.filter(Video.processing_status == status)
+
+            total = query.count()
+            offset = (page - 1) * per_page
+            videos = query.offset(offset).limit(per_page).all()
+
+            return videos, total
+
+    def get_videos_by_ids_dict(self, ids: list[int]) -> dict[int, Video]:
+        """
+        Busca multiplos videos por ID e retorna como dicionario.
+
+        Args:
+            ids: Lista de IDs dos videos
+
+        Returns:
+            Dicionario {video_id: Video}
+        """
+        if not ids:
+            return {}
+        with self._session() as session:
+            videos = session.query(Video).filter(Video.id.in_(ids)).all()
+            return {v.id: v for v in videos}
