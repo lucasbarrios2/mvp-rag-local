@@ -2,12 +2,16 @@
 EmbeddingService - Geracao de embeddings de texto via Google API.
 """
 
+import logging
+import time
 from dataclasses import dataclass
 from typing import Optional
 
 from google import genai
 
 from src.models import VideoAnalysis, DualVideoAnalysis, VisualAnalysis, NarrativeAnalysis
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -19,20 +23,30 @@ class DualEmbeddings:
 
 class EmbeddingService:
     def __init__(self, api_key: str, model: str, dimensions: int):
-        self.client = genai.Client(api_key=api_key)
+        self.client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
         self.model = model
         self.dimensions = dimensions
 
     def generate(self, text: str) -> list[float]:
-        """Gera embedding de texto via Google API."""
-        result = self.client.models.embed_content(
-            model=self.model,
-            contents=text,
-            config={
-                "output_dimensionality": self.dimensions,
-            },
-        )
-        return result.embeddings[0].values
+        """Gera embedding de texto via Google API com retry."""
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                result = self.client.models.embed_content(
+                    model=self.model,
+                    contents=text,
+                    config={
+                        "output_dimensionality": self.dimensions,
+                    },
+                )
+                return result.embeddings[0].values
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    logger.warning(f"Embedding attempt {attempt + 1} failed: {e}. Retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raise
 
     def generate_unified(self, composed_text: str) -> list[float]:
         """Gera embedding unificado a partir de texto ja composto pelo ContextComposer."""
