@@ -36,19 +36,7 @@ def search_videos(
     hits = []
     for r in results:
         payload = r.get("payload", {})
-        hits.append(
-            SearchHit(
-                id=r["id"],
-                filename=payload.get("filename"),
-                score=r["score"],
-                category=payload.get("category"),
-                emotional_tone=payload.get("emotional_tone"),
-                intensity=payload.get("intensity"),
-                viral_potential=payload.get("viral_potential"),
-                is_exclusive=payload.get("is_exclusive"),
-                source=payload.get("source"),
-            )
-        )
+        hits.append(_build_search_hit(r["id"], r["score"], payload))
 
     return SearchResponse(
         query=request.query,
@@ -74,22 +62,30 @@ def find_similar_videos(
     hits = []
     for r in results:
         payload = r.get("payload", {})
-        hits.append(
-            SearchHit(
-                id=r["id"],
-                filename=payload.get("filename"),
-                score=r["score"],
-                category=payload.get("category"),
-                emotional_tone=payload.get("emotional_tone"),
-                intensity=payload.get("intensity"),
-                viral_potential=payload.get("viral_potential"),
-                is_exclusive=payload.get("is_exclusive"),
-                source=payload.get("source"),
-            )
-        )
+        hits.append(_build_search_hit(r["id"], r["score"], payload))
 
     return SearchResponse(
         query=f"Similar to video {video_id} ({video.filename})",
         total_results=len(hits),
         results=hits,
+    )
+
+
+def _build_search_hit(point_id: int, score: float, payload: dict) -> SearchHit:
+    """Build SearchHit from Qdrant point data."""
+    return SearchHit(
+        id=point_id,
+        filename=payload.get("filename"),
+        score=score,
+        category=payload.get("category"),
+        emotional_tone=payload.get("emotional_tone"),
+        intensity=payload.get("intensity"),
+        viral_potential=payload.get("viral_potential"),
+        is_exclusive=payload.get("is_exclusive"),
+        source=payload.get("source"),
+        event_headline=payload.get("event_headline"),
+        camera_type=payload.get("camera_type"),
+        standalone_score=payload.get("standalone_score"),
+        visual_quality_score=payload.get("visual_quality_score"),
+        compilation_themes=payload.get("compilation_themes"),
     )

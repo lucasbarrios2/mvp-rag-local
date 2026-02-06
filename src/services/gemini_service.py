@@ -8,7 +8,8 @@ import time
 from google import genai
 from google.genai import types
 
-from src.models import VideoAnalysis, DualVideoAnalysis
+from src.compilation_themes import COMPILATION_THEMES_TAXONOMY_TEXT
+from src.models import VideoAnalysis, DualVideoAnalysis, FullVideoAnalysis
 
 
 # ============================================================================
@@ -77,6 +78,58 @@ Instrucoes:
 - themes: scores de 0 a 10 para temas como: humor, drama, romance, acao, suspense, educacao, etc
 - intensity: de 0 (calmo) a 10 (intenso)
 - viral_potential: de 0 (sem potencial) a 10 (altamente viral)
+
+Retorne APENAS o JSON, sem markdown, sem ```json, sem explicacao adicional."""
+
+
+# ============================================================================
+# PROMPTS DE ANÁLISE COMPILATION (foco em uso editorial para compilados)
+# ============================================================================
+
+COMPILATION_ANALYSIS_PROMPT = """Voce e um editor de video profissional que monta compilados de clips virais estilo "Refugio Mental" no YouTube.
+
+Contexto da analise visual ja feita:
+{visual_summary}
+
+Contexto da analise narrativa ja feita:
+{narrative_summary}
+
+Agora analise este MESMO video do ponto de vista EDITORIAL: como usar este clip num compilado?
+
+Taxonomia de temas disponiveis (escolha 1-3 que melhor se encaixam):
+{taxonomy}
+
+Retorne um JSON com a seguinte estrutura:
+
+{{
+  "event_headline": "Frase curta e impactante descrevendo o evento (ex: 'Urso invade loja e assusta clientes')",
+  "trim_in_ms": 0,
+  "trim_out_ms": 15000,
+  "money_shot_ms": 8000,
+  "camera_type": "cellphone",
+  "audio_usability": "usable",
+  "audio_usability_reason": "Audio ambiente claro sem musica de fundo",
+  "compilation_themes": ["animais_em_cidades"],
+  "narration_suggestion": "Frase em portugues estilo Refugio Mental para o narrador ler sobre este clip",
+  "location_country": "Brasil",
+  "location_environment": "urban",
+  "standalone_score": 8.0,
+  "visual_quality_score": 7.5
+}}
+
+Instrucoes:
+- event_headline: Manchete curta e impactante (max 80 chars), em portugues
+- trim_in_ms / trim_out_ms: Em milissegundos, onde comeca e termina a acao util (corte gordo)
+- money_shot_ms: Momento de maximo impacto visual (o frame que viraria thumbnail)
+- camera_type: Uma de: cctv, dashcam, cellphone, drone, bodycam, gopro, professional, other
+- audio_usability: Uma de: usable (audio bom), replace (precisa trocar), silent (sem audio), mixed (partes boas e ruins)
+- audio_usability_reason: Explique brevemente por que classificou assim
+- compilation_themes: Lista de 1-3 codigos da taxonomia acima (SOMENTE codigos validos)
+- narration_suggestion: Frase em portugues para narrador (estilo documentario sensacionalista)
+- location_country: Pais ou regiao se identificavel, senao "desconhecido"
+- location_environment: Um de: urban, rural, highway, forest, ocean, indoor, suburban, mountain, desert, river, farm, stadium, other
+- standalone_score: 0-10, o clip funciona sozinho como "momento #N" num compilado?
+- visual_quality_score: 0-10, considerando resolucao, estabilidade, iluminacao
 
 Retorne APENAS o JSON, sem markdown, sem ```json, sem explicacao adicional."""
 
@@ -191,6 +244,86 @@ class GeminiService:
 
         finally:
             # 4. Cleanup - deletar arquivo da API
+            try:
+                self.client.files.delete(name=video_file.name)
+            except Exception:
+                pass
+
+    def analyze_video_full(self, video_path: str) -> FullVideoAnalysis:
+        """
+        Upload video para Gemini e executa TRES analises (visual + narrativa + compilation).
+        Usa um unico upload para todas as analises (eficiente).
+        """
+        from src.models import VisualAnalysis, NarrativeAnalysis, CompilationAnalysis
+
+        # 1. Upload via File API (uma unica vez)
+        video_file = self._upload_and_wait(video_path)
+
+        try:
+            video_part = types.Part.from_uri(
+                file_uri=video_file.uri,
+                mime_type=video_file.mime_type,
+            )
+
+            # 2. Analise VISUAL (frame a frame)
+            visual_response = self.client.models.generate_content(
+                model=self.model,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[video_part, types.Part.from_text(text=VISUAL_ANALYSIS_PROMPT)],
+                    )
+                ],
+            )
+            visual_data = self._parse_json_response(visual_response.text)
+            visual_analysis = VisualAnalysis(**visual_data)
+
+            # 3. Analise NARRATIVA (contexto e significado)
+            narrative_response = self.client.models.generate_content(
+                model=self.model,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[video_part, types.Part.from_text(text=NARRATIVE_ANALYSIS_PROMPT)],
+                    )
+                ],
+            )
+            narrative_data = self._parse_json_response(narrative_response.text)
+            narrative_analysis = NarrativeAnalysis(**narrative_data)
+
+            # 4. Analise COMPILATION (uso editorial)
+            compilation_prompt = COMPILATION_ANALYSIS_PROMPT.format(
+                visual_summary=visual_analysis.visual_description[:500],
+                narrative_summary=narrative_analysis.narrative_description[:500],
+                taxonomy=COMPILATION_THEMES_TAXONOMY_TEXT,
+            )
+            compilation_response = self.client.models.generate_content(
+                model=self.model,
+                contents=[
+                    types.Content(
+                        role="user",
+                        parts=[video_part, types.Part.from_text(text=compilation_prompt)],
+                    )
+                ],
+            )
+            compilation_data = self._parse_json_response(compilation_response.text)
+            # Validate theme codes
+            from src.compilation_themes import VALID_THEME_CODES
+
+            compilation_data["compilation_themes"] = [
+                t for t in compilation_data.get("compilation_themes", [])
+                if t in VALID_THEME_CODES
+            ]
+            compilation_analysis = CompilationAnalysis(**compilation_data)
+
+            return FullVideoAnalysis(
+                visual=visual_analysis,
+                narrative=narrative_analysis,
+                compilation=compilation_analysis,
+            )
+
+        finally:
+            # 5. Cleanup - deletar arquivo da API
             try:
                 self.client.files.delete(name=video_file.name)
             except Exception:

@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from src.models import VideoAnalysis, DualVideoAnalysis
+from src.models import VideoAnalysis, DualVideoAnalysis, FullVideoAnalysis
 from src.services.context_composer import ContextComposer
 from src.services.database_service import DatabaseService
 from src.services.embedding_service import EmbeddingService
@@ -24,7 +24,7 @@ class ProcessingResult:
 
     success: bool
     video_id: int
-    analysis: Optional[DualVideoAnalysis] = None
+    analysis: Optional[FullVideoAnalysis] = None
     visual_embedding_id: Optional[str] = None
     narrative_embedding_id: Optional[str] = None
     unified_embedding_id: Optional[str] = None
@@ -34,7 +34,7 @@ class ProcessingResult:
 class VideoProcessor:
     """
     Processador de videos que coordena:
-    1. Analise Gemini DUAL (visual + narrativa)
+    1. Analise Gemini FULL (visual + narrativa + compilation)
     2. Geracao de embeddings duplos
     3. Indexacao no Qdrant (collection dual)
     4. Atualizacao no PostgreSQL
@@ -55,7 +55,7 @@ class VideoProcessor:
 
     def process(self, task: QueueTask) -> ProcessingResult:
         """
-        Processa um video da fila com analise DUAL.
+        Processa um video da fila com analise FULL (visual + narrativa + compilation).
 
         Args:
             task: Item da fila com video_id
@@ -77,16 +77,16 @@ class VideoProcessor:
 
             # 2. Marcar como analyzing
             self.db.set_analyzing(video_id)
-            logger.info(f"Iniciando analise DUAL do video {video_id}: {video.filename}")
+            logger.info(f"Iniciando analise FULL do video {video_id}: {video.filename}")
 
-            # 3. Analise Gemini DUAL (visual + narrativa)
-            logger.info(f"Enviando video {video_id} para Gemini (analise dual)...")
-            dual_analysis = self.gemini.analyze_video_dual(video.file_path)
-            logger.info(f"Analise dual concluida para video {video_id}")
+            # 3. Analise Gemini FULL (visual + narrativa + compilation)
+            logger.info(f"Enviando video {video_id} para Gemini (analise full)...")
+            full_analysis = self.gemini.analyze_video_full(video.file_path)
+            logger.info(f"Analise full concluida para video {video_id}")
 
             # 4. Gerar embeddings duplos
             logger.info(f"Gerando embeddings duplos para video {video_id}...")
-            dual_embeddings = self.embedding.generate_dual(dual_analysis)
+            dual_embeddings = self.embedding.generate_dual(full_analysis)
             logger.info(f"Embeddings duplos gerados para video {video_id}")
 
             # 5. Indexar no Qdrant (collection dual)
@@ -95,19 +95,19 @@ class VideoProcessor:
                 "video_id": video_id,
                 "filename": video.filename,
                 # Visual
-                "visual_description": dual_analysis.visual.visual_description,
-                "visual_tags": dual_analysis.visual.visual_tags,
-                "objects_detected": dual_analysis.visual.objects_detected,
-                "visual_style": dual_analysis.visual.visual_style,
-                "color_palette": dual_analysis.visual.color_palette,
+                "visual_description": full_analysis.visual.visual_description,
+                "visual_tags": full_analysis.visual.visual_tags,
+                "objects_detected": full_analysis.visual.objects_detected,
+                "visual_style": full_analysis.visual.visual_style,
+                "color_palette": full_analysis.visual.color_palette,
                 # Narrativa
-                "narrative_description": dual_analysis.narrative.narrative_description,
-                "narrative_tags": dual_analysis.narrative.narrative_tags,
-                "emotional_tone": dual_analysis.narrative.emotional_tone,
-                "intensity": dual_analysis.narrative.intensity,
-                "viral_potential": dual_analysis.narrative.viral_potential,
-                "themes": dual_analysis.narrative.themes,
-                "target_audience": dual_analysis.narrative.target_audience,
+                "narrative_description": full_analysis.narrative.narrative_description,
+                "narrative_tags": full_analysis.narrative.narrative_tags,
+                "emotional_tone": full_analysis.narrative.emotional_tone,
+                "intensity": full_analysis.narrative.intensity,
+                "viral_potential": full_analysis.narrative.viral_potential,
+                "themes": full_analysis.narrative.themes,
+                "target_audience": full_analysis.narrative.target_audience,
             }
             visual_id, narrative_id = self.qdrant.index_dual(
                 video_id,
@@ -118,8 +118,8 @@ class VideoProcessor:
             logger.info(f"Video {video_id} indexado no Qdrant (dual)")
 
             # 6. Atualizar PostgreSQL
-            self.db.update_dual_analysis(video_id, dual_analysis, visual_id, narrative_id)
-            logger.info(f"Video {video_id} processado com sucesso (dual)")
+            self.db.update_full_analysis(video_id, full_analysis, visual_id, narrative_id)
+            logger.info(f"Video {video_id} processado com sucesso (full)")
 
             # 7-11. Unified embedding
             unified_embedding_id = None
@@ -139,6 +139,15 @@ class VideoProcessor:
                             "viral_potential": updated_video.viral_potential,
                             "is_exclusive": updated_video.is_exclusive or False,
                             "source": updated_video.source or "local",
+                            # Compilation fields
+                            "camera_type": updated_video.camera_type,
+                            "audio_usability": updated_video.audio_usability,
+                            "compilation_themes": updated_video.compilation_themes or [],
+                            "standalone_score": updated_video.standalone_score,
+                            "visual_quality_score": updated_video.visual_quality_score,
+                            "location_country": updated_video.location_country,
+                            "location_environment": updated_video.location_environment,
+                            "event_headline": updated_video.event_headline,
                         }
                         unified_embedding_id = self.qdrant.index_unified(
                             video_id, unified_emb, unified_payload
@@ -151,7 +160,7 @@ class VideoProcessor:
             return ProcessingResult(
                 success=True,
                 video_id=video_id,
-                analysis=dual_analysis,
+                analysis=full_analysis,
                 visual_embedding_id=visual_id,
                 narrative_embedding_id=narrative_id,
                 unified_embedding_id=unified_embedding_id,

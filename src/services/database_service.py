@@ -8,7 +8,7 @@ from typing import Optional
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-from src.models import Video, VideoAnalysis, DualVideoAnalysis
+from src.models import Video, VideoAnalysis, DualVideoAnalysis, FullVideoAnalysis
 
 
 class DatabaseService:
@@ -95,6 +95,77 @@ class DatabaseService:
             video.themes = analysis.narrative.themes
             video.storytelling_elements = analysis.narrative.storytelling_elements
             video.target_audience = analysis.narrative.target_audience
+
+            # Campos combinados (legado/compatibilidade)
+            video.analysis_description = (
+                f"[VISUAL] {analysis.visual.visual_description}\n\n"
+                f"[NARRATIVA] {analysis.narrative.narrative_description}"
+            )
+            video.tags = list(set(
+                analysis.visual.visual_tags + analysis.narrative.narrative_tags
+            ))
+
+            # Embeddings
+            video.visual_embedding_id = visual_embedding_id
+            video.narrative_embedding_id = narrative_embedding_id
+            video.embedding_id = visual_embedding_id  # Legado
+
+            # Status
+            video.processing_status = "analyzed"
+            video.analyzed_at = datetime.utcnow()
+
+            if analysis.visual.duration_estimate:
+                video.duration_seconds = analysis.visual.duration_estimate
+
+            session.commit()
+            session.refresh(video)
+            return video
+
+    def update_full_analysis(
+        self,
+        video_id: int,
+        analysis: FullVideoAnalysis,
+        visual_embedding_id: str,
+        narrative_embedding_id: str,
+    ) -> Video:
+        """Atualiza video com resultados da analise FULL (visual + narrativa + compilation)."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).one()
+
+            # Analise VISUAL
+            video.visual_description = analysis.visual.visual_description
+            video.visual_tags = analysis.visual.visual_tags
+            video.objects_detected = analysis.visual.objects_detected
+            video.scenes = analysis.visual.scenes
+            video.visual_style = analysis.visual.visual_style
+            video.color_palette = analysis.visual.color_palette
+            video.movement_intensity = analysis.visual.movement_intensity
+
+            # Analise NARRATIVA
+            video.narrative_description = analysis.narrative.narrative_description
+            video.narrative_tags = analysis.narrative.narrative_tags
+            video.emotional_tone = analysis.narrative.emotional_tone
+            video.intensity = analysis.narrative.intensity
+            video.viral_potential = analysis.narrative.viral_potential
+            video.key_moments = analysis.narrative.key_moments
+            video.themes = analysis.narrative.themes
+            video.storytelling_elements = analysis.narrative.storytelling_elements
+            video.target_audience = analysis.narrative.target_audience
+
+            # Analise COMPILATION
+            video.event_headline = analysis.compilation.event_headline
+            video.trim_in_ms = analysis.compilation.trim_in_ms
+            video.trim_out_ms = analysis.compilation.trim_out_ms
+            video.money_shot_ms = analysis.compilation.money_shot_ms
+            video.camera_type = analysis.compilation.camera_type
+            video.audio_usability = analysis.compilation.audio_usability
+            video.audio_usability_reason = analysis.compilation.audio_usability_reason
+            video.compilation_themes = analysis.compilation.compilation_themes
+            video.narration_suggestion = analysis.compilation.narration_suggestion
+            video.location_country = analysis.compilation.location_country
+            video.location_environment = analysis.compilation.location_environment
+            video.standalone_score = analysis.compilation.standalone_score
+            video.visual_quality_score = analysis.compilation.visual_quality_score
 
             # Campos combinados (legado/compatibilidade)
             video.analysis_description = (

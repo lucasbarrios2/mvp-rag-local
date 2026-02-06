@@ -11,6 +11,7 @@ from qdrant_client.models import (
     Distance,
     FieldCondition,
     Filter,
+    MatchAny,
     MatchValue,
     NamedVector,
     PayloadSchemaType,
@@ -99,6 +100,14 @@ class QdrantService:
                 ("intensity", PayloadSchemaType.FLOAT),
                 ("viral_potential", PayloadSchemaType.FLOAT),
                 ("source", PayloadSchemaType.KEYWORD),
+                # Compilation fields
+                ("camera_type", PayloadSchemaType.KEYWORD),
+                ("audio_usability", PayloadSchemaType.KEYWORD),
+                ("standalone_score", PayloadSchemaType.FLOAT),
+                ("visual_quality_score", PayloadSchemaType.FLOAT),
+                ("location_environment", PayloadSchemaType.KEYWORD),
+                ("location_country", PayloadSchemaType.KEYWORD),
+                ("compilation_themes", PayloadSchemaType.KEYWORD),
             ]:
                 try:
                     self.client.create_payload_index(
@@ -187,6 +196,36 @@ class QdrantService:
                 FieldCondition(key="source", match=MatchValue(value=filters["source"]))
             )
 
+        # Compilation keyword filters
+        if filters.get("camera_type"):
+            conditions.append(
+                FieldCondition(key="camera_type", match=MatchValue(value=filters["camera_type"]))
+            )
+        if filters.get("audio_usability"):
+            conditions.append(
+                FieldCondition(
+                    key="audio_usability", match=MatchValue(value=filters["audio_usability"])
+                )
+            )
+        if filters.get("location_environment"):
+            conditions.append(
+                FieldCondition(
+                    key="location_environment", match=MatchValue(value=filters["location_environment"])
+                )
+            )
+
+        # Compilation theme filter (MatchAny on JSONB array)
+        if filters.get("compilation_theme"):
+            theme = filters["compilation_theme"]
+            if isinstance(theme, list):
+                conditions.append(
+                    FieldCondition(key="compilation_themes", match=MatchAny(any=theme))
+                )
+            else:
+                conditions.append(
+                    FieldCondition(key="compilation_themes", match=MatchValue(value=theme))
+                )
+
         # Range filters
         intensity_range = {}
         if filters.get("intensity_min") is not None:
@@ -206,6 +245,26 @@ class QdrantService:
         if viral_range:
             conditions.append(
                 FieldCondition(key="viral_potential", range=Range(**viral_range))
+            )
+
+        standalone_range = {}
+        if filters.get("standalone_score_min") is not None:
+            standalone_range["gte"] = filters["standalone_score_min"]
+        if filters.get("standalone_score_max") is not None:
+            standalone_range["lte"] = filters["standalone_score_max"]
+        if standalone_range:
+            conditions.append(
+                FieldCondition(key="standalone_score", range=Range(**standalone_range))
+            )
+
+        vq_range = {}
+        if filters.get("visual_quality_score_min") is not None:
+            vq_range["gte"] = filters["visual_quality_score_min"]
+        if filters.get("visual_quality_score_max") is not None:
+            vq_range["lte"] = filters["visual_quality_score_max"]
+        if vq_range:
+            conditions.append(
+                FieldCondition(key="visual_quality_score", range=Range(**vq_range))
             )
 
         if not conditions:

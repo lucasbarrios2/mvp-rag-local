@@ -9,7 +9,7 @@ from typing import Optional
 
 from google import genai
 
-from src.models import VideoAnalysis, DualVideoAnalysis, VisualAnalysis, NarrativeAnalysis
+from src.models import VideoAnalysis, DualVideoAnalysis, FullVideoAnalysis, VisualAnalysis, NarrativeAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +111,7 @@ class EmbeddingService:
         combined_text = ". ".join(parts)
         return self.generate(combined_text)
 
-    def generate_dual(self, analysis: DualVideoAnalysis) -> DualEmbeddings:
+    def generate_dual(self, analysis: DualVideoAnalysis | FullVideoAnalysis) -> DualEmbeddings:
         """Gera embeddings para ambas as analises (visual + narrativa)."""
         visual_embedding = self.generate_for_visual(analysis.visual)
         narrative_embedding = self.generate_for_narrative(analysis.narrative)

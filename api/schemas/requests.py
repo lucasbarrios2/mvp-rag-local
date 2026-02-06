@@ -35,6 +35,15 @@ class SearchFilters(BaseModel):
     viral_potential_min: Optional[float] = Field(None, ge=0.0, le=10.0)
     viral_potential_max: Optional[float] = Field(None, ge=0.0, le=10.0)
     source: Optional[str] = None
+    # Compilation filters
+    camera_type: Optional[str] = None
+    audio_usability: Optional[str] = None
+    compilation_theme: Optional[str] = None
+    standalone_score_min: Optional[float] = Field(None, ge=0.0, le=10.0)
+    standalone_score_max: Optional[float] = Field(None, ge=0.0, le=10.0)
+    visual_quality_score_min: Optional[float] = Field(None, ge=0.0, le=10.0)
+    visual_quality_score_max: Optional[float] = Field(None, ge=0.0, le=10.0)
+    location_environment: Optional[str] = None
 
 
 class SearchRequest(BaseModel):

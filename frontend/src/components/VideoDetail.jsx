@@ -16,6 +16,7 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted, onRetried
     { id: 'info', label: 'Info' },
     { id: 'visual', label: 'Visual' },
     { id: 'narrative', label: 'Narrative' },
+    { id: 'compilation', label: 'Compilation' },
     { id: 'metadata', label: 'Metadata' },
   ]
 
@@ -161,6 +162,33 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted, onRetried
         </div>
       )}
 
+      {tab === 'compilation' && (
+        <div>
+          <Field label="Headline" value={video.event_headline} />
+          <Field label="Narration Suggestion" value={video.narration_suggestion} />
+          {video.trim_in_ms != null && video.trim_out_ms != null && (
+            <Field label="Trim Points" value={`${formatMs(video.trim_in_ms)} - ${formatMs(video.trim_out_ms)}`} />
+          )}
+          {video.money_shot_ms != null && (
+            <Field label="Money Shot" value={formatMs(video.money_shot_ms)} />
+          )}
+          <Field label="Camera Type" value={video.camera_type} />
+          <Field label="Audio Usability" value={video.audio_usability} />
+          <Field label="Audio Reason" value={video.audio_usability_reason} />
+          <Field label="Location" value={[video.location_country, video.location_environment].filter(Boolean).join(' / ') || '-'} />
+          <Field label="Standalone Score" value={video.standalone_score != null ? `${video.standalone_score} / 10` : '-'} />
+          <Field label="Visual Quality" value={video.visual_quality_score != null ? `${video.visual_quality_score} / 10` : '-'} />
+          {video.compilation_themes?.length > 0 && (
+            <div className="detail-field">
+              <div className="field-label">Compilation Themes</div>
+              <div className="tags-list">
+                {video.compilation_themes.map((t, i) => <span key={i} className="tag">{t}</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {tab === 'metadata' && (
         <div>
           <Field label="Source" value={video.source} />
@@ -293,6 +321,15 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted, onRetried
       </div>
     </div>
   )
+}
+
+function formatMs(ms) {
+  if (ms == null) return '?:??'
+  const secs = ms / 1000
+  const mins = Math.floor(secs / 60)
+  const s = Math.floor(secs % 60)
+  const frac = Math.floor((secs % 1) * 10)
+  return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}.${frac}`
 }
 
 function formatTimestamp(m) {

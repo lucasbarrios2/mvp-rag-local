@@ -38,6 +38,21 @@ class VideoContext(BaseModel):
     key_moments: Optional[list] = None
     target_audience: Optional[str] = None
 
+    # Compilation
+    event_headline: Optional[str] = None
+    trim_in_ms: Optional[int] = None
+    trim_out_ms: Optional[int] = None
+    money_shot_ms: Optional[int] = None
+    camera_type: Optional[str] = None
+    audio_usability: Optional[str] = None
+    audio_usability_reason: Optional[str] = None
+    compilation_themes: Optional[list] = None
+    narration_suggestion: Optional[str] = None
+    location_country: Optional[str] = None
+    location_environment: Optional[str] = None
+    standalone_score: Optional[float] = None
+    visual_quality_score: Optional[float] = None
+
     # Source metadata
     newsflare_id: Optional[str] = None
     category: Optional[str] = None
@@ -99,6 +114,12 @@ class SearchHit(BaseModel):
     viral_potential: Optional[float] = None
     is_exclusive: Optional[bool] = None
     source: Optional[str] = None
+    # Compilation fields
+    event_headline: Optional[str] = None
+    camera_type: Optional[str] = None
+    standalone_score: Optional[float] = None
+    visual_quality_score: Optional[float] = None
+    compilation_themes: Optional[list] = None
 
 
 class SearchResponse(BaseModel):

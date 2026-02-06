@@ -23,6 +23,12 @@ export default function Search() {
     intensity_max: '',
     viral_potential_min: '',
     viral_potential_max: '',
+    camera_type: '',
+    compilation_theme: '',
+    standalone_score_min: '',
+    standalone_score_max: '',
+    visual_quality_score_min: '',
+    visual_quality_score_max: '',
   })
 
   async function handleSearch(e) {
@@ -38,6 +44,12 @@ export default function Search() {
       if (filters.intensity_max) f.intensity_max = parseFloat(filters.intensity_max)
       if (filters.viral_potential_min) f.viral_potential_min = parseFloat(filters.viral_potential_min)
       if (filters.viral_potential_max) f.viral_potential_max = parseFloat(filters.viral_potential_max)
+      if (filters.camera_type) f.camera_type = filters.camera_type
+      if (filters.compilation_theme) f.compilation_theme = filters.compilation_theme
+      if (filters.standalone_score_min) f.standalone_score_min = parseFloat(filters.standalone_score_min)
+      if (filters.standalone_score_max) f.standalone_score_max = parseFloat(filters.standalone_score_max)
+      if (filters.visual_quality_score_min) f.visual_quality_score_min = parseFloat(filters.visual_quality_score_min)
+      if (filters.visual_quality_score_max) f.visual_quality_score_max = parseFloat(filters.visual_quality_score_max)
       const res = await search(query, f)
       setResults(res)
       setExpandedId(null)
@@ -160,6 +172,45 @@ export default function Search() {
               />
             </div>
           </div>
+
+          <div className="section-title" style={{ marginTop: 12 }}>Compilation Filters</div>
+          <div className="filter-group">
+            <label>Camera Type</label>
+            <select value={filters.camera_type} onChange={(e) => updateFilter('camera_type', e.target.value)}>
+              <option value="">All</option>
+              <option value="cctv">CCTV</option>
+              <option value="dashcam">Dashcam</option>
+              <option value="cellphone">Cellphone</option>
+              <option value="drone">Drone</option>
+              <option value="bodycam">Bodycam</option>
+              <option value="gopro">GoPro</option>
+              <option value="professional">Professional</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <label>Compilation Theme</label>
+            <input
+              type="text"
+              placeholder="e.g. animais_em_cidades"
+              value={filters.compilation_theme}
+              onChange={(e) => updateFilter('compilation_theme', e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <label>Standalone Score Range</label>
+            <div className="filter-row">
+              <input type="number" placeholder="Min" min="0" max="10" step="0.1" value={filters.standalone_score_min} onChange={(e) => updateFilter('standalone_score_min', e.target.value)} />
+              <input type="number" placeholder="Max" min="0" max="10" step="0.1" value={filters.standalone_score_max} onChange={(e) => updateFilter('standalone_score_max', e.target.value)} />
+            </div>
+          </div>
+          <div className="filter-group">
+            <label>Visual Quality Range</label>
+            <div className="filter-row">
+              <input type="number" placeholder="Min" min="0" max="10" step="0.1" value={filters.visual_quality_score_min} onChange={(e) => updateFilter('visual_quality_score_min', e.target.value)} />
+              <input type="number" placeholder="Max" min="0" max="10" step="0.1" value={filters.visual_quality_score_max} onChange={(e) => updateFilter('visual_quality_score_max', e.target.value)} />
+            </div>
+          </div>
         </div>
       )}
 
@@ -178,6 +229,11 @@ export default function Search() {
                     <span className="filename">{r.filename || `Video #${r.id}`}</span>
                     <span className="video-id">ID: {r.id}</span>
                   </div>
+                  {r.event_headline && (
+                    <div className="event-headline" style={{ fontSize: '0.85em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                      {r.event_headline}
+                    </div>
+                  )}
                   <div className="score-bar">
                     <div
                       className="score-bar-fill"
@@ -195,6 +251,9 @@ export default function Search() {
                     {r.is_exclusive && <span className="badge exclusive">Exclusive</span>}
                     {r.category && <span className="badge category">{r.category}</span>}
                     {r.source && <span className="badge">{r.source}</span>}
+                    {r.camera_type && <span className="badge">{r.camera_type}</span>}
+                    {r.standalone_score != null && <span className="badge">Solo: {r.standalone_score}</span>}
+                    {r.visual_quality_score != null && <span className="badge">VQ: {r.visual_quality_score}</span>}
                   </div>
                 </div>
                 {expandedId === r.id && (

@@ -4,6 +4,8 @@ ContextComposer - Compoe texto rico de todas as camadas de um video para embeddi
 
 from typing import Optional
 
+from src.compilation_themes import COMPILATION_THEMES
+
 
 class ContextComposer:
     """
@@ -84,6 +86,23 @@ class ContextComposer:
         if video.audio_transcript:
             parts.append(f"Transcricao: {video.audio_transcript[:500]}")
 
+        # Camada 5: Compilation analysis
+        if getattr(video, "event_headline", None):
+            parts.append(f"Headline: {video.event_headline}")
+        if getattr(video, "compilation_themes", None):
+            themes_list = video.compilation_themes if isinstance(video.compilation_themes, list) else []
+            resolved = [COMPILATION_THEMES.get(t, t) for t in themes_list]
+            if resolved:
+                parts.append("Temas compilacao: " + ", ".join(resolved))
+        if getattr(video, "camera_type", None):
+            parts.append(f"Camera: {video.camera_type}")
+        if getattr(video, "location_country", None):
+            parts.append(f"Pais: {video.location_country}")
+        if getattr(video, "location_environment", None):
+            parts.append(f"Ambiente: {video.location_environment}")
+        if getattr(video, "narration_suggestion", None):
+            parts.append(f"Narracao: {video.narration_suggestion}")
+
         # Fallback: campos legados
         if not parts and video.analysis_description:
             parts.append(video.analysis_description)
@@ -142,6 +161,34 @@ class ContextComposer:
             context["key_moments"] = video.key_moments
         if video.target_audience:
             context["target_audience"] = video.target_audience
+
+        # Compilation
+        if getattr(video, "event_headline", None):
+            context["event_headline"] = video.event_headline
+        if getattr(video, "trim_in_ms", None) is not None:
+            context["trim_in_ms"] = video.trim_in_ms
+        if getattr(video, "trim_out_ms", None) is not None:
+            context["trim_out_ms"] = video.trim_out_ms
+        if getattr(video, "money_shot_ms", None) is not None:
+            context["money_shot_ms"] = video.money_shot_ms
+        if getattr(video, "camera_type", None):
+            context["camera_type"] = video.camera_type
+        if getattr(video, "audio_usability", None):
+            context["audio_usability"] = video.audio_usability
+        if getattr(video, "audio_usability_reason", None):
+            context["audio_usability_reason"] = video.audio_usability_reason
+        if getattr(video, "compilation_themes", None):
+            context["compilation_themes"] = video.compilation_themes
+        if getattr(video, "narration_suggestion", None):
+            context["narration_suggestion"] = video.narration_suggestion
+        if getattr(video, "location_country", None):
+            context["location_country"] = video.location_country
+        if getattr(video, "location_environment", None):
+            context["location_environment"] = video.location_environment
+        if getattr(video, "standalone_score", None) is not None:
+            context["standalone_score"] = video.standalone_score
+        if getattr(video, "visual_quality_score", None) is not None:
+            context["visual_quality_score"] = video.visual_quality_score
 
         # Legado fallback
         if video.analysis_description:

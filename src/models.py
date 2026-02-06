@@ -72,6 +72,25 @@ class Video(Base):
     storytelling_elements = Column(JSONB, default={})
     target_audience = Column(Text)
 
+    # Analise Gemini - COMPILATION (uso editorial para compilados)
+    event_headline = Column(Text)
+    trim_in_ms = Column(Integer)
+    trim_out_ms = Column(Integer)
+    money_shot_ms = Column(Integer)
+    camera_type = Column(String(50))
+    audio_usability = Column(String(20))
+    audio_usability_reason = Column(Text)
+    compilation_themes = Column(JSONB, default=[])
+    narration_suggestion = Column(Text)
+    location_country = Column(String(200))
+    location_environment = Column(String(50))
+    standalone_score = Column(
+        Float, CheckConstraint("standalone_score >= 0 AND standalone_score <= 10")
+    )
+    visual_quality_score = Column(
+        Float, CheckConstraint("visual_quality_score >= 0 AND visual_quality_score <= 10")
+    )
+
     # Campos legados (mantidos para compatibilidade)
     analysis_description = Column(Text)
     tags = Column(JSONB, default=[])
@@ -151,6 +170,55 @@ class DualVideoAnalysis(BaseModel):
 
     visual: VisualAnalysis
     narrative: NarrativeAnalysis
+
+    @property
+    def duration_estimate(self) -> Optional[float]:
+        return self.visual.duration_estimate
+
+
+class CompilationAnalysis(BaseModel):
+    """Resultado da analise COMPILATION do video (uso editorial para compilados)."""
+
+    event_headline: str = Field(..., description="Frase curta para legenda")
+    trim_in_ms: int = Field(0, ge=0, description="Inicio da acao util em ms")
+    trim_out_ms: int = Field(0, ge=0, description="Fim da acao util em ms")
+    money_shot_ms: int = Field(0, ge=0, description="Frame de maximo impacto em ms")
+    camera_type: str = Field(
+        default="other",
+        description="Tipo de camera: cctv, dashcam, cellphone, drone, bodycam, gopro, professional, other",
+    )
+    audio_usability: str = Field(
+        default="mixed",
+        description="Usabilidade do audio: usable, replace, silent, mixed",
+    )
+    audio_usability_reason: str = Field(
+        default="", description="Razao da classificacao de audio"
+    )
+    compilation_themes: list[str] = Field(
+        default_factory=list, description="Temas da taxonomia de compilados"
+    )
+    narration_suggestion: str = Field(
+        default="", description="Frase sugerida para narrador"
+    )
+    location_country: str = Field(default="", description="Pais/regiao")
+    location_environment: str = Field(
+        default="other",
+        description="Ambiente: urban, rural, highway, forest, ocean, indoor, suburban, mountain, desert, river, farm, stadium, other",
+    )
+    standalone_score: float = Field(
+        5.0, ge=0.0, le=10.0, description="Score de autonomia do clip"
+    )
+    visual_quality_score: float = Field(
+        5.0, ge=0.0, le=10.0, description="Score de qualidade visual"
+    )
+
+
+class FullVideoAnalysis(BaseModel):
+    """Resultado completo com 3 analises (visual + narrativa + compilation)."""
+
+    visual: VisualAnalysis
+    narrative: NarrativeAnalysis
+    compilation: CompilationAnalysis
 
     @property
     def duration_estimate(self) -> Optional[float]:
