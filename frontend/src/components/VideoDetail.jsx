@@ -144,7 +144,7 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted }) {
               <div className="key-moments-list">
                 {video.key_moments.map((m, i) => (
                   <div key={i} className="moment-item">
-                    <span className="moment-time">{formatTimestamp(m)}s</span>
+                    <span className="moment-time">{formatTimestamp(m)}</span>
                     <span className="moment-desc">{m.event || m.description || JSON.stringify(m)}</span>
                   </div>
                 ))}
@@ -268,11 +268,14 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted }) {
 }
 
 function formatTimestamp(m) {
-  // Support timestamp_ms (milliseconds), timestamp (seconds), or time
-  if (m.timestamp_ms != null) return (m.timestamp_ms / 1000).toFixed(1)
-  if (m.timestamp != null) return Number(m.timestamp).toFixed(1)
-  if (m.time != null) return Number(m.time).toFixed(1)
-  return '?'
+  let secs = null
+  if (m.timestamp_ms != null) secs = m.timestamp_ms / 1000
+  else if (m.timestamp != null) secs = Number(m.timestamp)
+  else if (m.time != null) secs = Number(m.time)
+  if (secs == null || isNaN(secs)) return '?:??'
+  const mins = Math.floor(secs / 60)
+  const s = Math.floor(secs % 60)
+  return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 function Field({ label, value, mono }) {
