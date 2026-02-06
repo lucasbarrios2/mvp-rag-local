@@ -270,8 +270,8 @@ def retry_video(
     video = db.get_video(video_id)
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
-    if video.processing_status not in ("failed", "pending"):
-        raise HTTPException(status_code=400, detail=f"Video status is '{video.processing_status}', not retryable")
+    if video.processing_status == "analyzing":
+        raise HTTPException(status_code=400, detail="Video is currently being analyzed")
 
     # Reset video status
     db.reset_to_pending(video_id)

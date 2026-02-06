@@ -259,8 +259,8 @@ class QdrantService:
             try:
                 info = self.client.get_collection(name)
                 stats[name] = {
-                    "points_count": info.points_count,
-                    "vectors_count": info.vectors_count,
+                    "points_count": info.points_count or 0,
+                    "vectors_count": getattr(info, 'vectors_count', None) or getattr(info, 'indexed_vectors_count', 0) or 0,
                 }
             except Exception:
                 stats[name] = {"points_count": 0, "vectors_count": 0}

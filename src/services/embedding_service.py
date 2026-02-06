@@ -21,9 +21,6 @@ class DualEmbeddings:
     narrative: list[float]
 
 
-FALLBACK_MODEL = "gemini-embedding-001"
-
-
 class EmbeddingService:
     def __init__(self, api_key: str, model: str, dimensions: int):
         self.client_v1 = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
@@ -40,24 +37,24 @@ class EmbeddingService:
         return result.embeddings[0].values
 
     def generate(self, text: str) -> list[float]:
-        """Gera embedding com fallback de modelo e API version."""
+        """Gera embedding com retries em diferentes API versions."""
         attempts = [
-            (self.client_v1, self.model),
             (self.client_default, self.model),
-            (self.client_default, FALLBACK_MODEL),
-            (self.client_v1, FALLBACK_MODEL),
+            (self.client_v1, self.model),
+            (self.client_default, self.model),  # retry default
+            (self.client_v1, self.model),        # retry v1
         ]
         last_error = None
         for i, (client, model) in enumerate(attempts):
             try:
                 result = self._try_embed(client, model, text)
                 if i > 0:
-                    logger.info(f"Embedding succeeded with fallback: {model}")
+                    logger.info(f"Embedding succeeded on attempt {i + 1}")
                 return result
             except Exception as e:
                 last_error = e
                 wait = min(2 ** i, 4)
-                logger.warning(f"Embedding failed ({model}): {e}. Retrying in {wait}s...")
+                logger.warning(f"Embedding attempt {i + 1} failed ({model}): {e}. Retrying in {wait}s...")
                 time.sleep(wait)
         raise last_error
 

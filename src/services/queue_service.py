@@ -236,7 +236,7 @@ class QueueService:
 
     def retry(self, video_id: int) -> bool:
         """
-        Reenfileira um video falho para nova tentativa.
+        Reenfileira um video para nova tentativa (failed ou completed).
 
         Args:
             video_id: ID do video (nao o queue_id)
@@ -254,7 +254,7 @@ class QueueService:
                     error_message = NULL,
                     locked_at = NULL,
                     locked_by = NULL
-                WHERE video_id = :video_id AND status = 'failed'
+                WHERE video_id = :video_id AND status IN ('failed', 'completed')
                 RETURNING id
             """
                 ),
