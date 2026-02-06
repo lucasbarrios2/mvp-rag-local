@@ -85,6 +85,13 @@ export async function updateMetadata(videoId, metadata) {
   })
 }
 
+export async function retryVideo(videoId) {
+  return request(`${BASE}/videos/${videoId}/retry`, {
+    method: 'POST',
+    headers: headers(),
+  })
+}
+
 export async function deleteVideo(videoId) {
   return request(`${BASE}/videos/${videoId}`, {
     method: 'DELETE',

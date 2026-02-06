@@ -129,6 +129,14 @@ class DatabaseService:
             video.error_message = error_message
             session.commit()
 
+    def reset_to_pending(self, video_id: int) -> None:
+        """Reseta video para pending, limpando erro."""
+        with self._session() as session:
+            video = session.query(Video).filter(Video.id == video_id).one()
+            video.processing_status = "pending"
+            video.error_message = None
+            session.commit()
+
     def set_analyzing(self, video_id: int) -> None:
         """Marca video como em analise."""
         with self._session() as session:

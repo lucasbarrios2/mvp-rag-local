@@ -258,3 +258,27 @@ def delete_video(
         deleted=True,
         message=f"Video '{filename}' deleted successfully",
     )
+
+
+@router.post("/{video_id}/retry")
+def retry_video(
+    video_id: int,
+    db=Depends(get_db),
+    queue=Depends(get_queue),
+):
+    """Reenfileira video falho para nova tentativa de processamento."""
+    video = db.get_video(video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if video.processing_status not in ("failed", "pending"):
+        raise HTTPException(status_code=400, detail=f"Video status is '{video.processing_status}', not retryable")
+
+    # Reset video status
+    db.reset_to_pending(video_id)
+
+    # Retry in queue or enqueue fresh
+    retried = queue.retry(video_id)
+    if not retried:
+        queue.enqueue(video_id)
+
+    return {"video_id": video_id, "status": "pending", "message": "Video queued for reprocessing"}

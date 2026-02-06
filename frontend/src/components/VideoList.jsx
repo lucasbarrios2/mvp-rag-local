@@ -136,6 +136,10 @@ export default function VideoList() {
                 setDetail(null)
                 setSimilarResults(null)
               }}
+              onRetried={() => {
+                loadVideos(statusFilter)
+                setDetail(prev => prev ? { ...prev, processing_status: 'pending', error_message: null } : null)
+              }}
             />
           )}
 

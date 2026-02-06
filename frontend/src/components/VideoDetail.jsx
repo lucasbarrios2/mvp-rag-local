@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { similar, updateMetadata, deleteVideo } from '../api'
+import { similar, updateMetadata, deleteVideo, retryVideo } from '../api'
 
-export default function VideoDetail({ video, onFindSimilar, onDeleted }) {
+export default function VideoDetail({ video, onFindSimilar, onDeleted, onRetried }) {
   const [tab, setTab] = useState('info')
   const [metaForm, setMetaForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   if (!video) return null
 
@@ -68,6 +69,12 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted }) {
           </button>
         ))}
       </div>
+
+      {video.error_message && (
+        <div className="error-msg" style={{ marginBottom: 12 }}>
+          {video.error_message}
+        </div>
+      )}
 
       {tab === 'info' && (
         <div>
@@ -219,6 +226,27 @@ export default function VideoDetail({ video, onFindSimilar, onDeleted }) {
       )}
 
       <div className="detail-actions" style={{ marginTop: 20 }}>
+        {(video.processing_status === 'failed' || video.processing_status === 'pending') && (
+          <button
+            className="btn btn-sm"
+            disabled={retrying}
+            onClick={async () => {
+              setRetrying(true)
+              setSaveMsg(null)
+              try {
+                await retryVideo(video.id)
+                setSaveMsg({ type: 'success', text: 'Video queued for reprocessing' })
+                onRetried?.(video.id)
+              } catch (e) {
+                setSaveMsg({ type: 'error', text: e.message })
+              } finally {
+                setRetrying(false)
+              }
+            }}
+          >
+            {retrying ? 'Retrying...' : 'Retry Processing'}
+          </button>
+        )}
         <button className="btn btn-sm btn-outline" onClick={onFindSimilar}>
           Find Similar
         </button>

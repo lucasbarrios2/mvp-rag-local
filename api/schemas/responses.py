@@ -20,6 +20,7 @@ class VideoContext(BaseModel):
     duration_seconds: Optional[float] = None
     mime_type: Optional[str] = None
     processing_status: Optional[str] = None
+    error_message: Optional[str] = None
 
     # Visual
     visual_description: Optional[str] = None
@@ -72,6 +73,7 @@ class VideoSummary(BaseModel):
     id: int
     filename: str
     processing_status: Optional[str] = None
+    error_message: Optional[str] = None
     emotional_tone: Optional[str] = None
     category: Optional[str] = None
     source: Optional[str] = None

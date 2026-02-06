@@ -21,32 +21,45 @@ class DualEmbeddings:
     narrative: list[float]
 
 
+FALLBACK_MODEL = "gemini-embedding-001"
+
+
 class EmbeddingService:
     def __init__(self, api_key: str, model: str, dimensions: int):
-        self.client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
+        self.client_v1 = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
+        self.client_default = genai.Client(api_key=api_key)
         self.model = model
         self.dimensions = dimensions
 
+    def _try_embed(self, client, model: str, text: str) -> list[float]:
+        result = client.models.embed_content(
+            model=model,
+            contents=text,
+            config={"output_dimensionality": self.dimensions},
+        )
+        return result.embeddings[0].values
+
     def generate(self, text: str) -> list[float]:
-        """Gera embedding de texto via Google API com retry."""
-        max_retries = 3
-        for attempt in range(max_retries):
+        """Gera embedding com fallback de modelo e API version."""
+        attempts = [
+            (self.client_v1, self.model),
+            (self.client_default, self.model),
+            (self.client_default, FALLBACK_MODEL),
+            (self.client_v1, FALLBACK_MODEL),
+        ]
+        last_error = None
+        for i, (client, model) in enumerate(attempts):
             try:
-                result = self.client.models.embed_content(
-                    model=self.model,
-                    contents=text,
-                    config={
-                        "output_dimensionality": self.dimensions,
-                    },
-                )
-                return result.embeddings[0].values
+                result = self._try_embed(client, model, text)
+                if i > 0:
+                    logger.info(f"Embedding succeeded with fallback: {model}")
+                return result
             except Exception as e:
-                if attempt < max_retries - 1:
-                    wait = 2 ** attempt
-                    logger.warning(f"Embedding attempt {attempt + 1} failed: {e}. Retrying in {wait}s...")
-                    time.sleep(wait)
-                else:
-                    raise
+                last_error = e
+                wait = min(2 ** i, 4)
+                logger.warning(f"Embedding failed ({model}): {e}. Retrying in {wait}s...")
+                time.sleep(wait)
+        raise last_error
 
     def generate_unified(self, composed_text: str) -> list[float]:
         """Gera embedding unificado a partir de texto ja composto pelo ContextComposer."""
