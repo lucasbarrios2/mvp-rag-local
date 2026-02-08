@@ -76,7 +76,21 @@
       "Bash(npm install:*)",
       "Bash(npx vite build:*)",
       "Bash(npm run dev:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(venv/bin/pip show:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker ps:*)",
+      "Bash(sudo ls:*)",
+      "Bash(docker run:*)",
+      "Bash(RUN_WORKER=1 /home/lucasbarrios/projects/mvp-rag-local/venv/bin/python:*)",
+      "Bash(for id in 19 20 21 22 23 24 25)",
+      "Bash(do echo -n \"Video $id: \")",
+      "Bash(done)",
+      "Bash(xargs kill:*)",
+      "Bash(for id in 21 23)",
+      "Bash(for id in 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26)",
+      "Bash(do curl -s -X POST http://localhost:8000/api/v1/videos/$id/retry)",
+      "Bash(venv/bin/streamlit run app.py)"
     ]
   }
 }
